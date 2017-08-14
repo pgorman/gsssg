@@ -5,13 +5,20 @@ import (
 	"flag"
 	"fmt"
 	"github.com/russross/blackfriday"
-	"text/template"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+	"text/template"
 )
+
+type Page struct {
+	File  string
+	Body  string
+	Title string
+}
 
 func main() {
 	outdir := flag.String("o", "", "Specify an output directory for .html files (i.e., not the input directory).")
@@ -41,21 +48,42 @@ func main() {
 		}
 		outDir = *outdir
 	}
-	tmpl, err := template.ParseFiles(path.Join(inDir, "template.html"))
-	if err != nil {
-		panic(err)
+	var tmpl *template.Template
+	if _, err := os.Stat(path.Join(inDir, "template.html")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
+		<html lang="en-us">
+		<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>{{.Title}}</title>
+		</head>
+		<body>{{.Body}}</body>
+		</html>`)
+	} else {
+		tmpl, err = template.ParseFiles(path.Join(inDir, "template.html"))
+		if err != nil {
+			panic(err)
+		}
 	}
+
 	inFiles, err := filepath.Glob(path.Join(inDir, *fglob))
 	if err != nil {
 		log.Fatal(err)
 	}
+	var p Page
 	for _, f := range inFiles {
 		input, err := ioutil.ReadFile(f)
 		if err != nil {
 			log.Fatal(err)
 		}
-		Body := string(blackfriday.MarkdownCommon(input))
-		err = tmpl.Execute(os.Stdout, Body)
+		p.File = path.Base(f)
+		p.Body = string(blackfriday.MarkdownCommon(input))
+		firstLine := strings.Trim(strings.Split(string(input), "\n")[0], " #")
+		if firstLine != "" {
+			p.Title = firstLine
+		} else {
+			p.Title = p.File
+		}
+		err = tmpl.Execute(os.Stdout, p)
 	}
 	fmt.Println(outDir)
 }
