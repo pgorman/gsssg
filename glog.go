@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"github.com/russross/blackfriday"
@@ -83,7 +84,19 @@ func main() {
 		} else {
 			p.Title = p.File
 		}
-		err = tmpl.Execute(os.Stdout, p)
+//		err = tmpl.Execute(os.Stdout, p)
+		err = tmpl.Execute(ioutil.Discard, p)
+
+		// Look for title/header, date, and hashtags:
+		newlines := func(c rune) bool {
+			return strings.ContainsRune("\u000A\u000B\u000C\u000D\u0085\u2028\u2029", c)
+		}
+		for i, v := range bytes.FieldsFunc(input, newlines) {
+			if i > 5 {
+				break;
+			}
+			fmt.Println(i, v)
+		}
 	}
 	fmt.Println(outDir)
 }
