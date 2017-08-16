@@ -17,6 +17,10 @@ If the file `template.html` exists in the target directory, Glog reads it as a G
 If the first line if an input file is a Markdown header, Glog uses that as the title of the page;
 otherwise, it uses the file name.
 
+Glog sets the date of the page as the first line containing a date formatted like "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017".
+This is the default format of the GNU `date` command.
+If the file does not contain such a line, Glog sets the page date to the mtime of the file (see INODE(7)).
+
 ## Dependencies ##
 
 Glog depends on the Blackfriday Markdown parser.

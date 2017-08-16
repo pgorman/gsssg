@@ -14,12 +14,14 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type Page struct {
 	File  string
 	Body  string
 	Title string
+	Date  time.Time
 }
 
 func main() {
@@ -75,9 +77,11 @@ func main() {
 	}
 
 	reTitle := regexp.MustCompile(`\s*#*\s+\w+\s*#*\s*`)
-	reHashtags := regexp.MustCompile(`(\s*#\w+,?\s*)+`)
-	// TODO Support various date formats
-	reDate := regexp.MustCompile(`\s*[MTWFS][ouehrau][neduitn] [JFMASOND][aepuco][nbrylgptvc]\s{1,2}\d{1,2} [0-2]\d:[0-5][0-9]:[0-5][0-9] [A-Z]{3} \d{4}\s*`)
+//	reHashtags := regexp.MustCompile(`(\s*#\w+,?\s*)+`)
+	// "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017" i.e. time.UnixDate
+	reDate1 := regexp.MustCompile(`\s*[MTWFS][ouehrau][neduitn] [JFMASOND][aepuco][nbrylgptvc]\s{1,2}\d{1,2} [0-2]\d:[0-5][0-9]:[0-5][0-9] [A-Z]{3} \d{4}\s*`)
+	// "20161231" or "20161231091857" or "20170101" or "20170101075601"
+	reDate2 := regexp.MustCompile(`\d{4}[01]\d[0-3]\d([01]\d[0-5]\d[0-5]\d)?`)
 
 	for _, f := range inFiles {
 		var p Page
@@ -85,31 +89,54 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		p.File = path.Base(f)
+		p.File = strings.TrimSuffix(path.Base(f), path.Ext(f))
 		p.Body = string(blackfriday.MarkdownCommon(input))
-//		firstLine := strings.Trim(strings.Split(string(input), "\n")[0], " #")
-//		err = tmpl.Execute(os.Stdout, p)
+		//		firstLine := strings.Trim(strings.Split(string(input), "\n")[0], " #")
+		//		err = tmpl.Execute(os.Stdout, p)
 		err = tmpl.Execute(ioutil.Discard, p)
 
 		// Look for title/header, date, and hashtags:
 		newlines := func(c rune) bool {
 			return strings.ContainsRune("\u000A\u000B\u000C\u000D\u0085\u2028\u2029", c)
 		}
-		for i, v := range bytes.FieldsFunc(input, newlines) {
+		for _, v := range bytes.FieldsFunc(input, newlines) {
 			if reTitle.Match(v) && p.Title == "" {
 				p.Title = string(bytes.Trim(v, " #"))
-				fmt.Println(i, "TITLE", p.Title)
 			}
-			if reHashtags.Match(v) {
-				fmt.Println(i, "TAGS", string(v))
-			}
-			if reDate.Match(v) {
-				fmt.Println(i, "DATE", string(v))
+//			if reHashtags.Match(v) {
+//				fmt.Println(i, "TAGS", string(v))
+//			}
+			if reDate1.Match(v) && p.Date.IsZero() {
+				p.Date, err = time.Parse(time.UnixDate, string(v))
+				if err != nil {
+					log.Println(err, string(v))
+				}
 			}
 		}
 		if p.Title == "" {
 			p.Title = p.File
 		}
+		// TODO Force local timezone rather than UTC.
+		if p.Date.IsZero() && reDate2.MatchString(p.File) {
+			d := []byte(p.File)
+			for len(d) < 14 {
+				d = append(d, "0"...)
+			}
+			p.Date, err = time.Parse("20060102150405", string(d))
+			if err != nil {
+				log.Println(err)
+			}
+		}
+		if p.Date.IsZero() {
+			st, err := os.Stat(f)
+			if err != nil {
+				log.Println(err, f)
+			}
+			p.Date = st.ModTime()
+		}
+		fmt.Println("FILE", p.File)
+		fmt.Println("TITLE", p.Title)
+		fmt.Println("DATE", p.Date, "\n")
 	}
 
 	fmt.Println(outDir)
