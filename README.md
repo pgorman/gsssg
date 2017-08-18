@@ -1,16 +1,21 @@
 Glog is a very, very simple static site generator written in Go (golang).
 
-If the first argument is an absolute path (beginning with "/"), Glog reads all the `.txt` files in that directory, and outputs `.html` files to the same path.
+Glog treats the first argument as a path.
+It reads all the `.txt` files in that directory, and outputs `.html` files to the same path.
 It overwrites existing `.html` files with the same name.
-If the `-o` flag is given with the path to a directory, output will be redirected there.
-It also produces a `contents.html` --- an alphabetized list of links to each `.html` file.
+If the `-o` flag is given with the path to a directory, output will be sent there.
+Glog also produces a `contents.html` --- an alphabetized list of links to each `.html` file.
 
 	$ glog /home/me/blog/
 	$ glog -g '*.md' -o /tmp /home/me/blog/
 
-If the user does not supply a path, glog will look in the current directory.
+If the user does not supply a path, Glog looks in the current directory.
 
-For files named like `20171231.md` or `20171231235959.md`, glog creates "forward" and "backward" links between files.
+For a complete list of command-line options:
+
+	$ glog -h
+
+For files named like `20171231.md` or `20171231235959.md`, Glog creates "forward" and "backward" links between files.
 Glog may also produce an RSS feed.
 
 If the file `page.tmpl` exists in the target directory, Glog reads it as a Go template for format output.
@@ -26,6 +31,35 @@ If the file does not contain such a line, Glog sets the page date to the mtime o
 Glog depends on the Blackfriday Markdown parser.
 
 	$ go get github.com/russross/blackfriday
+
+## Configuration and Publishing ##
+
+Glog does not use a configuration file.
+It does not have a "publish" function.
+
+The recommended way to fulfill these rolls is with a simple shell script, like:
+
+```
+#!/bin/sh
+
+title="My Blog"
+desc="My blog posts awesome stuff!"
+url="https://example.com/blog/"
+now=$(date +%Y-%m-%d-%H%M%S)
+odir=/tmp/"$title"/"$now"
+
+mkdir -p odir
+
+$HOME/bin/glog -o "$odir" \
+	-t $HOME/repo/"$title"/templates \
+	-g '.md' \
+	-t "$title" \
+	-d "$desc" \
+	-u "$url" \
+	$HOME/repo/"$title"
+
+rsync
+```
 
 ## License (2-Clause BSD License) ##
 

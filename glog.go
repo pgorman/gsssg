@@ -26,12 +26,22 @@ type Page struct {
 	Hashtags string // TODO Change to a slice?
 }
 
+type Feed struct {
+	Title string
+	Desc string
+	URL string
+	items []Page
+}
+
 func main() {
-	debug := flag.Bool("d", false, "Write debug info to STDOUT.")
-	outdir := flag.String("o", "", "Specify an output directory for .html files (i.e., instead of the input directory).")
+	siteDesc := flag.String("d", "", "Description of the site, like 'All the news that's fit to print'. Required to produce RSS feed.")
+	debug := flag.Bool("debug", false, "Write debug info to STDERR.")
 	fglob := flag.String("g", "*.txt", "Specify the file glob pattern of input files.")
-	utc := flag.Bool("u", false, "For dates with unknown time zones, assume UTC rather than local time.")
-	tmpldir := flag.String("t", "", "Specify the directory that contains template files (defaults to input directory).")
+	tmpldir := flag.String("l", "", "Specify the directory for template files. (default to input directory).")
+	outdir := flag.String("o", "", "Specify the output directory. (default to the current working directory).")
+	siteTitle := flag.String("t", "", "Title of site, like 'My Blog'. Required to produce RSS feed.")
+	siteURL := flag.String("u", "", "URL of site, like 'https://example.com/blog/'. Required to produce RSS feed.")
+	utc := flag.Bool("z", false, "For dates with unknown time zones, assume UTC rather than local time.")
 	flag.Parse()
 
 	var inDir, outDir string
@@ -67,7 +77,8 @@ func main() {
 		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
 		<html lang="en-us">
 		<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="default.css" />
 		<title>{{.Title}}</title>
 		</head>
 		<body>{{.Body}}</body>
@@ -147,6 +158,11 @@ func main() {
 				log.Println(err, fi)
 			}
 			p.Date = st.ModTime()
+		}
+
+		// RSS feed
+		if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
+			fmt.Println("RSS", *siteTitle, *siteURL, *siteDesc)
 		}
 
 		if *debug {
