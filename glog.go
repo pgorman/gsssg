@@ -22,13 +22,16 @@ type Page struct {
 	Body     string
 	Title    string
 	Date     time.Time
+	firmDate bool
 	Hashtags string // TODO Change to a slice?
 }
 
 func main() {
-	outdir := flag.String("o", "", "Specify an output directory for .html files (i.e., not the input directory).")
+	debug := flag.Bool("d", false, "Write debug info to STDOUT.")
+	outdir := flag.String("o", "", "Specify an output directory for .html files (i.e., instead of the input directory).")
 	fglob := flag.String("g", "*.txt", "Specify the file glob pattern of input files.")
-	utc := flag.Bool("u", false, "When unspecified, assume UTC for dates rather than local time.")
+	utc := flag.Bool("u", false, "For dates with unknown time zones, assume UTC rather than local time.")
+	tmpldir := flag.String("t", "", "Specify the directory that contains template files (defaults to input directory).")
 	flag.Parse()
 
 	var inDir, outDir string
@@ -57,7 +60,10 @@ func main() {
 	}
 
 	var tmpl *template.Template
-	if _, err := os.Stat(path.Join(inDir, "template.html")); os.IsNotExist(err) {
+	if *tmpldir == "" {
+		*tmpldir = inDir
+	}
+	if _, err := os.Stat(path.Join(*tmpldir, "page.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
 		<html lang="en-us">
 		<head>
@@ -67,7 +73,7 @@ func main() {
 		<body>{{.Body}}</body>
 		</html>`)
 	} else {
-		tmpl, err = template.ParseFiles(path.Join(inDir, "template.html"))
+		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "page.tmpl"))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -86,23 +92,20 @@ func main() {
 	reDate2 := regexp.MustCompile(`\d{4}[01]\d[0-3]\d([01]\d[0-5]\d[0-5]\d)?`)
 
 	// Process each input file:
-	for _, f := range inFiles {
+	for _, fi := range inFiles {
 		var p Page
-		input, err := ioutil.ReadFile(f)
+		input, err := ioutil.ReadFile(fi)
 		if err != nil {
 			log.Fatal(err)
 		}
-		p.File = strings.TrimSuffix(path.Base(f), path.Ext(f))
+		p.File = strings.TrimSuffix(path.Base(fi), path.Ext(fi))
 		p.Body = string(blackfriday.MarkdownCommon(input))
-		// TODO File output.
-		// err = tmpl.Execute(os.Stdout, p)
-		err = tmpl.Execute(ioutil.Discard, p)
 
 		newlines := func(c rune) bool {
 			return strings.ContainsRune("\u000A\u000B\u000C\u000D\u0085\u2028\u2029", c)
 		}
 
-		// Process each line in this input file, looking for date, title, and hashtags:
+		// Process each line in this input file, looking for date, title, and hashtags.
 		for _, v := range bytes.FieldsFunc(input, newlines) {
 			if reTitle.Match(v) && p.Title == "" {
 				p.Title = string(bytes.Trim(v, " #"))
@@ -115,10 +118,11 @@ func main() {
 				if err != nil {
 					log.Println(err, string(v))
 				}
+				p.firmDate = true
 			}
 		}
 
-		// If we didn't find good a good date or title in the file contents, guess:
+		// If we didn't find a good date or title in the file contents, guess:
 		if p.Title == "" {
 			p.Title = p.File
 		}
@@ -135,20 +139,30 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			}
+			p.firmDate = true
 		}
 		if p.Date.IsZero() {
-			st, err := os.Stat(f)
+			st, err := os.Stat(fi)
 			if err != nil {
-				log.Println(err, f)
+				log.Println(err, fi)
 			}
 			p.Date = st.ModTime()
 		}
 
-		fmt.Println("FILE", p.File)
-		fmt.Println("TITLE", p.Title)
-		fmt.Println("DATE", p.Date)
-		fmt.Println("TAGS", p.Hashtags, "\n")
-	}
+		if *debug {
+			fmt.Fprintf(os.Stderr, "FILE\t%v\n", p.File)
+			fmt.Fprintf(os.Stderr, "TITLE\t%v\n", p.Title)
+			fmt.Fprintf(os.Stderr, "DATE\t%v\n", p.Date)
+			fmt.Fprintf(os.Stderr, "TAGS\t%v\n", p.Hashtags)
+			fmt.Fprintf(os.Stderr, "OUT\t%v\n\n", path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
+			// err = tmpl.Execute(os.Stdout, p)
+			// err = tmpl.Execute(ioutil.Discard, p)
+		}
 
-	fmt.Println(outDir)
+		fo, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
+		if err != nil {
+			log.Println(err)
+		}
+		err = tmpl.Execute(fo, p)
+	}
 }

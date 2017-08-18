@@ -13,7 +13,7 @@ If the user does not supply a path, glog will look in the current directory.
 For files named like `20171231.md` or `20171231235959.md`, glog creates "forward" and "backward" links between files.
 Glog may also produce an RSS feed.
 
-If the file `template.html` exists in the target directory, Glog reads it as a Go template for format output.
+If the file `page.tmpl` exists in the target directory, Glog reads it as a Go template for format output.
 If the first line if an input file is a Markdown header, Glog uses that as the title of the page;
 otherwise, it uses the file name.
 
