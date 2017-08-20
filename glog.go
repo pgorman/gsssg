@@ -28,9 +28,15 @@ type Page struct {
 
 type Feed struct {
 	Title string
-	Desc string
-	URL string
-	items []Page
+	Desc  string
+	URL   string
+	Items []*Item
+}
+
+type Item struct {
+	Title string
+	Link  string
+	Date  time.Time
 }
 
 func main() {
@@ -95,6 +101,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	Pages := make([]*Page, len(inFiles))
+
 	reTitle := regexp.MustCompile(`\s*#*\s+\w+\s*#*\s*`)
 	reHashtags := regexp.MustCompile(`(\s*#\w+,?\s*)+`)
 	// "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017" i.e. time.UnixDate
@@ -103,13 +111,13 @@ func main() {
 	reDate2 := regexp.MustCompile(`\d{4}[01]\d[0-3]\d([01]\d[0-5]\d[0-5]\d)?`)
 
 	// Process each input file:
-	for _, fi := range inFiles {
+	for i, f := range inFiles {
 		var p Page
-		input, err := ioutil.ReadFile(fi)
+		input, err := ioutil.ReadFile(f)
 		if err != nil {
 			log.Fatal(err)
 		}
-		p.File = strings.TrimSuffix(path.Base(fi), path.Ext(fi))
+		p.File = strings.TrimSuffix(path.Base(f), path.Ext(f))
 		p.Body = string(blackfriday.MarkdownCommon(input))
 
 		newlines := func(c rune) bool {
@@ -117,17 +125,17 @@ func main() {
 		}
 
 		// Process each line in this input file, looking for date, title, and hashtags.
-		for _, v := range bytes.FieldsFunc(input, newlines) {
-			if reTitle.Match(v) && p.Title == "" {
-				p.Title = string(bytes.Trim(v, " #"))
+		for _, l := range bytes.FieldsFunc(input, newlines) {
+			if reTitle.Match(l) && p.Title == "" {
+				p.Title = string(bytes.Trim(l, " #"))
 			}
-			if reHashtags.Match(v) {
-				p.Hashtags = string(v)
+			if reHashtags.Match(l) {
+				p.Hashtags = string(l)
 			}
-			if reDate1.Match(v) && p.Date.IsZero() {
-				p.Date, err = time.Parse(time.UnixDate, string(v))
+			if reDate1.Match(l) && p.Date.IsZero() {
+				p.Date, err = time.Parse(time.UnixDate, string(l))
 				if err != nil {
-					log.Println(err, string(v))
+					log.Println(err, string(l))
 				}
 				p.firmDate = true
 			}
@@ -153,17 +161,20 @@ func main() {
 			p.firmDate = true
 		}
 		if p.Date.IsZero() {
-			st, err := os.Stat(fi)
+			st, err := os.Stat(f)
 			if err != nil {
-				log.Println(err, fi)
+				log.Println(err, f)
 			}
 			p.Date = st.ModTime()
 		}
 
-		// RSS feed
-		if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
-			fmt.Println("RSS", *siteTitle, *siteURL, *siteDesc)
+		Pages[i] = &p
+
+		f, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
+		if err != nil {
+			log.Println(err)
 		}
+		err = tmpl.Execute(f, p)
 
 		if *debug {
 			fmt.Fprintf(os.Stderr, "FILE\t%v\n", p.File)
@@ -174,11 +185,53 @@ func main() {
 			// err = tmpl.Execute(os.Stdout, p)
 			// err = tmpl.Execute(ioutil.Discard, p)
 		}
+	}
 
-		fo, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
+	// RSS feed
+	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
+		// TODO Set the URL/Link/GUID for pages in the feed.
+		// TODO Sort Items by date.
+		feed := Feed{
+			Title: *siteTitle,
+			URL:   *siteURL,
+			Desc:  *siteDesc,
+			Items: make([]*Item, 0, len(Pages)),
+		}
+		for _, p := range Pages {
+			// title link date
+			if p.firmDate {
+				item := Item{
+					Title: p.Title,
+					Link: p.File,
+					Date: p.Date,
+				}
+				feed.Items = append(feed.Items, &item)
+			}
+		}
+		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
+			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
+			<rss version="2.0">
+			<channel>
+			<title>{{.Title}}</title>
+			<link>{{.URL}}</link>
+			<description>{{.Desc}}</description>
+			{{range .Items}}<item>
+			<title>{{.Title}}</title>
+			<link>{{.Link}}</link>
+			<guid isPermaLink="true">{{.Link}}</guid>
+			</item>{{end}}
+			</channel>
+			</rss>`)
+		} else {
+			tmpl, err = template.ParseFiles(path.Join(*tmpldir, "rss.tmpl"))
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		f, err := os.Create(path.Join(outDir, "rss.xml"))
 		if err != nil {
 			log.Println(err)
 		}
-		err = tmpl.Execute(fo, p)
+		err = tmpl.Execute(f, feed)
 	}
 }

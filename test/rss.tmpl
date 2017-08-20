@@ -4,5 +4,10 @@
 <title>{{.Title}}</title>
 <link>{{.URL}}</link>
 <description>{{.Desc}}</description>
+{{range .Items}}<item>
+<title>{{.Title}}</title>
+<link>{{.Link}}</link>
+<guid isPermaLink="true">{{.Link}}</guid>
+</item>{{end}}
 </channel>
 </rss>
