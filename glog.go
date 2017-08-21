@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -26,17 +27,31 @@ type Page struct {
 	Hashtags string // TODO Change to a slice?
 }
 
-type Feed struct {
-	Title string
-	Desc  string
-	URL   string
-	Items []*Item
-}
-
 type Item struct {
 	Title string
 	Link  string
 	Date  time.Time
+}
+
+type Items []*Item
+
+type Feed struct {
+	Title string
+	Desc  string
+	URL   string
+	Items Items
+}
+
+func (a Items) Len() int {
+	return len(a)
+}
+
+func (a Items) Less(i, j int) bool {
+	return a[i].Date.After(a[j].Date)
+}
+
+func (a Items) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
 }
 
 func main() {
@@ -209,6 +224,8 @@ func main() {
 				feed.Items = append(feed.Items, &item)
 			}
 		}
+		// According to the spec, feed items don't _need_ to be sorted, but...
+		sort.Sort(feed.Items)
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
 			<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -235,5 +252,10 @@ func main() {
 			log.Println(err)
 		}
 		err = tmpl.Execute(f, feed)
+		if *debug {
+			for _, item := range feed.Items {
+				fmt.Println(item.Date, "\t", item.Link, "\t", item.Title)
+			}
+		}
 	}
 }
