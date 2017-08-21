@@ -189,8 +189,10 @@ func main() {
 
 	// RSS feed
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
-		// TODO Set the URL/Link/GUID for pages in the feed.
 		// TODO Sort Items by date.
+		if !strings.HasSuffix(*siteURL, "/") {
+			*siteURL += "/"
+		}
 		feed := Feed{
 			Title: *siteTitle,
 			URL:   *siteURL,
@@ -198,20 +200,20 @@ func main() {
 			Items: make([]*Item, 0, len(Pages)),
 		}
 		for _, p := range Pages {
-			// title link date
 			if p.firmDate {
 				item := Item{
 					Title: p.Title,
-					Link: p.File,
-					Date: p.Date,
+					Link:  strings.Join([]string{feed.URL, p.File, ".html"}, ""),
+					Date:  p.Date,
 				}
 				feed.Items = append(feed.Items, &item)
 			}
 		}
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
-			<rss version="2.0">
+			<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 			<channel>
+			<atom:link href="{{.URL}}rss.xml" rel="self" type="application/rss+xml" />
 			<title>{{.Title}}</title>
 			<link>{{.URL}}</link>
 			<description>{{.Desc}}</description>
