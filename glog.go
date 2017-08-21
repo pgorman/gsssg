@@ -204,7 +204,6 @@ func main() {
 
 	// RSS feed
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
-		// TODO Sort Items by date.
 		if !strings.HasSuffix(*siteURL, "/") {
 			*siteURL += "/"
 		}
@@ -224,7 +223,7 @@ func main() {
 				feed.Items = append(feed.Items, &item)
 			}
 		}
-		// According to the spec, feed items don't _need_ to be sorted, but...
+		// According to the RSS spec, feed items don't _need_ to be sorted, but...
 		sort.Sort(feed.Items)
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
