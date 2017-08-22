@@ -35,30 +35,35 @@ Glog depends on the Blackfriday Markdown parser.
 ## Configuration and Publishing ##
 
 Glog does not use a configuration file.
-It does not have a "publish" function.
+It does not have a built-in "publish" function.
 
-The recommended way to fulfill these rolls is with a simple shell script, like:
+Use a simple shell script to configure Glog and publish, like:
 
 ```
 #!/bin/sh
+set -euf
 
 title="My Blog"
 desc="My blog posts awesome stuff!"
-url="https://example.com/blog/"
+url="https://example.com/blog"
 now=$(date +%Y-%m-%d-%H%M%S)
-odir=/tmp/"$title"/"$now"
+indir="$HOME"/repo/"$title"
+outdir=/tmp/"$title"/"$now"
+remotedir=/var/www/html/blog
+server=example.com
 
-mkdir -p odir
+mkdir -p "$outdir"
 
-$HOME/bin/glog -o "$odir" \
-	-t $HOME/repo/"$title"/templates \
+$HOME/bin/glog -o "$outdir" \
+	-t "$indir"/templates \
 	-g '.md' \
 	-t "$title" \
 	-d "$desc" \
 	-u "$url" \
-	$HOME/repo/"$title"
+	"$indir"
 
-rsync
+ssh "$server" mkdir -p "$remotedir"/.trash
+rsync -azq --delete --backup --backup-dir=.trash -e ssh "$outdir" "$server":"$remotedir"
 ```
 
 ## License (2-Clause BSD License) ##
