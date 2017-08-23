@@ -24,34 +24,30 @@ type Page struct {
 	Title    string
 	Date     time.Time
 	firmDate bool
+	Link  string
 	Hashtags string // TODO Change to a slice?
 }
 
-type Item struct {
-	Title string
-	Link  string
-	Date  time.Time
-}
-
-type Items []*Item
+type Pages []*Page
 
 type Feed struct {
 	Title string
 	Desc  string
 	URL   string
-	Items Items
+	Items Pages
 }
 
-func (a Items) Len() int {
-	return len(a)
+func (p Pages) Len() int {
+	return len(p)
 }
 
-func (a Items) Less(i, j int) bool {
-	return a[i].Date.After(a[j].Date)
+func (p Pages) Less(i, j int) bool {
+	// This would normally be Date.Before(), but we want newest to oldest.
+	return p[i].Date.After(p[j].Date)
 }
 
-func (a Items) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
+func (p Pages) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
 }
 
 func main() {
@@ -116,7 +112,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	Pages := make([]*Page, len(inFiles))
+	Pages := make(Pages, len(inFiles))
 
 	reTitle := regexp.MustCompile(`\s*#*\s+\w+\s*#*\s*`)
 	reHashtags := regexp.MustCompile(`(\s*#\w+,?\s*)+`)
@@ -202,6 +198,8 @@ func main() {
 		}
 	}
 
+	sort.Sort(Pages)
+
 	// RSS feed
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
 		if !strings.HasSuffix(*siteURL, "/") {
@@ -211,20 +209,15 @@ func main() {
 			Title: *siteTitle,
 			URL:   *siteURL,
 			Desc:  *siteDesc,
-			Items: make([]*Item, 0, len(Pages)),
 		}
-		for _, p := range Pages {
+		for _,p := range Pages {
 			if p.firmDate {
-				item := Item{
-					Title: p.Title,
-					Link:  strings.Join([]string{feed.URL, p.File, ".html"}, ""),
-					Date:  p.Date,
-				}
-				feed.Items = append(feed.Items, &item)
+				feed.Items = append(feed.Items, p)
 			}
 		}
-		// According to the RSS spec, feed items don't _need_ to be sorted, but...
-		sort.Sort(feed.Items)
+		for _, item := range feed.Items {
+			item.Link = strings.Join([]string{feed.URL, item.File, ".html"}, "")
+		}
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
 			<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
