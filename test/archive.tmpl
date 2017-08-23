@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="default.css" />
+<title>Archive</title>
+</head>
+<body>
+<ul>
+{{range .Pages}}<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
+</ul>
+</body>
+</html>

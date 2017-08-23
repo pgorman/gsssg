@@ -24,30 +24,38 @@ type Page struct {
 	Title    string
 	Date     time.Time
 	firmDate bool
-	Link  string
+	Link     string
 	Hashtags string // TODO Change to a slice?
 }
 
 type Pages []*Page
+
+func (ps Pages) Len() int {
+	return len(ps)
+}
+
+func (ps Pages) Swap(i, j int) {
+	ps[i], ps[j] = ps[j], ps[i]
+}
+
+type PagesByDate struct{ Pages }
+
+func (ps PagesByDate) Less(i, j int) bool {
+	// This would normally be Date.Before(), but we want newest to oldest.
+	return ps[i].Date.After(ps[j].Date)
+}
+
+type PagesByTitle struct{ Pages }
+
+func (ps PagesByTitle) Less(i, j int) bool {
+	return ps[i].Title < ps[j].Title
+}
 
 type Feed struct {
 	Title string
 	Desc  string
 	URL   string
 	Items Pages
-}
-
-func (p Pages) Len() int {
-	return len(p)
-}
-
-func (p Pages) Less(i, j int) bool {
-	// This would normally be Date.Before(), but we want newest to oldest.
-	return p[i].Date.After(p[j].Date)
-}
-
-func (p Pages) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
 }
 
 func main() {
@@ -121,7 +129,7 @@ func main() {
 	// "20161231" or "20161231091857" or "20170101" or "20170101075601"
 	reDate2 := regexp.MustCompile(`\d{4}[01]\d[0-3]\d([01]\d[0-5]\d[0-5]\d)?`)
 
-	// Process each input file:
+	//////////////// Process each input file ////////////////
 	for i, f := range inFiles {
 		var p Page
 		input, err := ioutil.ReadFile(f)
@@ -198,9 +206,9 @@ func main() {
 		}
 	}
 
-	sort.Sort(Pages)
+	sort.Sort(PagesByDate{ Pages })
 
-	// RSS feed
+	//////////////// Generate RSS feed ////////////////
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
 		if !strings.HasSuffix(*siteURL, "/") {
 			*siteURL += "/"
@@ -209,8 +217,9 @@ func main() {
 			Title: *siteTitle,
 			URL:   *siteURL,
 			Desc:  *siteDesc,
+			Items: make([]*Page, 0, len(Pages)),
 		}
-		for _,p := range Pages {
+		for _, p := range Pages {
 			if p.firmDate {
 				feed.Items = append(feed.Items, p)
 			}
@@ -250,4 +259,7 @@ func main() {
 			}
 		}
 	}
+
+	//////////////// Generate (reverse) chronological Archive page ////////////////
+	//////////////// Generate alphabetically sorted Contents page ////////////////
 }

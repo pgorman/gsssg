@@ -66,6 +66,10 @@ ssh "$server" mkdir -p "$remotedir"/.trash
 rsync -azq --delete --backup --backup-dir=.trash -e ssh "$outdir" "$server":"$remotedir"
 ```
 
+## Test ##
+
+	$ $GOPATH/bin/glog -debug -o /tmp -d 'My site is cool.' -t 'My Blog' -u 'https://example.com/blog' ./test/
+
 ## License (2-Clause BSD License) ##
 
 Copyright 2017 Paul Gorman
