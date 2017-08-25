@@ -28,34 +28,11 @@ type Page struct {
 	Hashtags string // TODO Change to a slice?
 }
 
-type Pages []*Page
-
-func (ps Pages) Len() int {
-	return len(ps)
-}
-
-func (ps Pages) Swap(i, j int) {
-	ps[i], ps[j] = ps[j], ps[i]
-}
-
-type PagesByDate struct{ Pages }
-
-func (ps PagesByDate) Less(i, j int) bool {
-	// This would normally be Date.Before(), but we want newest to oldest.
-	return ps[i].Date.After(ps[j].Date)
-}
-
-type PagesByTitle struct{ Pages }
-
-func (ps PagesByTitle) Less(i, j int) bool {
-	return ps[i].Title < ps[j].Title
-}
-
 type Feed struct {
 	Title string
 	Desc  string
 	URL   string
-	Items Pages
+	Items []*Page
 }
 
 func main() {
@@ -120,7 +97,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	Pages := make(Pages, len(inFiles))
+	Pages := make([]*Page, len(inFiles))
 
 	reTitle := regexp.MustCompile(`\s*#*\s+\w+\s*#*\s*`)
 	reHashtags := regexp.MustCompile(`(\s*#\w+,?\s*)+`)
@@ -206,7 +183,7 @@ func main() {
 		}
 	}
 
-	sort.Sort(PagesByDate{ Pages })
+	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Date.After(Pages[j].Date) })
 
 	//////////////// Generate RSS feed ////////////////
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
@@ -262,4 +239,8 @@ func main() {
 
 	//////////////// Generate (reverse) chronological Archive page ////////////////
 	//////////////// Generate alphabetically sorted Contents page ////////////////
+	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Title < Pages[j].Title })
+	for _, p := range Pages {
+		fmt.Println(p.Title)
+	}
 }
