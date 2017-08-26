@@ -41,6 +41,7 @@ func main() {
 	fglob := flag.String("g", "*.txt", "Specify the file glob pattern of input files.")
 	tmpldir := flag.String("l", "", "Specify the directory for template files. (default to input directory).")
 	outdir := flag.String("o", "", "Specify the output directory. (default to the current working directory).")
+	pre := flag.Bool("p", false, "Leave input as pre-formatted text; don't process it like Markdown.")
 	siteTitle := flag.String("t", "", "Title of site, like 'My Blog'. Required to produce RSS feed.")
 	siteURL := flag.String("u", "", "URL of site, like 'https://example.com/blog/'. Required to produce RSS feed.")
 	utc := flag.Bool("z", false, "For dates with unknown time zones, assume UTC rather than local time.")
@@ -114,7 +115,11 @@ func main() {
 			log.Fatal(err)
 		}
 		p.File = strings.TrimSuffix(path.Base(f), path.Ext(f))
-		p.Body = string(blackfriday.MarkdownCommon(input))
+		if *pre {
+			p.Body = string(input)
+		} else {
+			p.Body = string(blackfriday.MarkdownCommon(input))
+		}
 
 		newlines := func(c rune) bool {
 			return strings.ContainsRune("\u000A\u000B\u000C\u000D\u0085\u2028\u2029", c)
@@ -164,13 +169,14 @@ func main() {
 			p.Date = st.ModTime()
 		}
 
-		Pages[i] = &p
-
 		f, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
 		if err != nil {
 			log.Println(err)
 		}
 		err = tmpl.Execute(f, p)
+
+		p.Body = ""
+		Pages[i] = &p
 
 		if *debug {
 			fmt.Fprintf(os.Stderr, "FILE\t%v\n", p.File)
