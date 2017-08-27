@@ -6,8 +6,8 @@
 <title>Contents</title>
 </head>
 <body>
-<ul>
-{{range .Pages}}<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
+<ul>{{range .}}
+<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
 </ul>
 </body>
 </html>

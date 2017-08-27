@@ -80,23 +80,6 @@ func main() {
 		*tmpldir = inDir
 	}
 
-	if _, err := os.Stat(path.Join(*tmpldir, "page.tmpl")); os.IsNotExist(err) {
-		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
-		<html lang="en-us">
-		<head>
-		<meta charset="utf-8" />
-		<link rel="stylesheet" href="default.css" />
-		<title>{{.Title}}</title>
-		</head>
-		<body>{{.Body}}</body>
-		</html>`)
-	} else {
-		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "page.tmpl"))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
 	inFiles, err := filepath.Glob(path.Join(inDir, *fglob))
 	if err != nil {
 		log.Fatal(err)
@@ -201,7 +184,23 @@ func main() {
 		}
 	}
 
-	//////////////// Output Pages ////////////////
+	//////////////// Output individual pages ////////////////
+	if _, err := os.Stat(path.Join(*tmpldir, "page.tmpl")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
+		<html lang="en-us">
+		<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="default.css" />
+		<title>{{.Title}}</title>
+		</head>
+		<body>{{.Body}}</body>
+		</html>`)
+	} else {
+		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "page.tmpl"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	for _, p := range Pages {
 		f, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
 		if err != nil {
@@ -210,9 +209,7 @@ func main() {
 		err = tmpl.Execute(f, p)
 	}
 
-	//////////////// Generate Chronological Archive Page ////////////////
-	if _, err := os.Stat(path.Join(*tmpldir, "archive.tmpl")); os.IsNotExist(err) {
-		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
+	postListTmpl := `<!DOCTYPE html>
 		<html lang="en-us">
 		<head>
 		<meta charset="utf-8" />
@@ -222,7 +219,11 @@ func main() {
 		<ul>{{range .}}
 		<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
 		</ul></body>
-		</html>`)
+		</html>`
+
+	//////////////// Generate chronological Archive page ////////////////
+	if _, err := os.Stat(path.Join(*tmpldir, "archive.tmpl")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(postListTmpl)
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "archive.tmpl"))
 		if err != nil {
@@ -238,8 +239,27 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//////////////// Generate alphabetically sorted Contents page ////////////////
+	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Title < Pages[j].Title })
+	if _, err := os.Stat(path.Join(*tmpldir, "contents.tmpl")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(postListTmpl)
+	} else {
+		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "contents.tmpl"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	f, err = os.Create(path.Join(outDir, "contents.html"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tmpl.Execute(f, Pages)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	//////////////// Generate RSS feed ////////////////
+	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Date.After(Pages[j].Date) })
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
 		if !strings.HasSuffix(*siteURL, "/") {
 			*siteURL += "/"
@@ -291,9 +311,4 @@ func main() {
 		}
 	}
 
-	//////////////// Generate alphabetically sorted Contents page ////////////////
-	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Title < Pages[j].Title })
-	for _, p := range Pages {
-		fmt.Println(p.Title)
-	}
 }
