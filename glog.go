@@ -26,6 +26,8 @@ type Page struct {
 	firmDate bool
 	Link     string
 	Hashtags string // TODO Change to a slice?
+	Next     string
+	Prev     string
 }
 
 type Feed struct {
@@ -73,9 +75,11 @@ func main() {
 	}
 
 	var tmpl *template.Template
+
 	if *tmpldir == "" {
 		*tmpldir = inDir
 	}
+
 	if _, err := os.Stat(path.Join(*tmpldir, "page.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
 		<html lang="en-us">
@@ -101,7 +105,7 @@ func main() {
 	Pages := make([]*Page, len(inFiles))
 
 	reTitle := regexp.MustCompile(`\s*#*\s+\w+\s*#*\s*`)
-	reHashtags := regexp.MustCompile(`(\s*#\w+,?\s*)+`)
+	reHashtags := regexp.MustCompile(`[,\s^](#\w+)`)
 	// "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017" i.e. time.UnixDate
 	reDate1 := regexp.MustCompile(`\s*[MTWFS][ouehrau][neduitn] [JFMASOND][aepuco][nbrylgptvc]\s{1,2}\d{1,2} [0-2]\d:[0-5][0-9]:[0-5][0-9] [A-Z]{3} \d{4}\s*`)
 	// "20161231" or "20161231091857" or "20170101" or "20170101075601"
@@ -136,7 +140,7 @@ func main() {
 			if reDate1.Match(l) && p.Date.IsZero() {
 				p.Date, err = time.Parse(time.UnixDate, string(l))
 				if err != nil {
-					log.Println(err, string(l))
+					log.Fatal(err, string(l))
 				}
 				p.firmDate = true
 			}
@@ -157,25 +161,18 @@ func main() {
 				p.Date, err = time.ParseInLocation("20060102150405", string(d), time.Now().Location())
 			}
 			if err != nil {
-				log.Println(err)
+				log.Fatal(err)
 			}
 			p.firmDate = true
 		}
 		if p.Date.IsZero() {
 			st, err := os.Stat(f)
 			if err != nil {
-				log.Println(err, f)
+				log.Fatal(err, f)
 			}
 			p.Date = st.ModTime()
 		}
 
-		f, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
-		if err != nil {
-			log.Println(err)
-		}
-		err = tmpl.Execute(f, p)
-
-		p.Body = ""
 		Pages[i] = &p
 
 		if *debug {
@@ -191,6 +188,57 @@ func main() {
 
 	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Date.After(Pages[j].Date) })
 
+	for i, p := range Pages {
+		p.Link = strings.Join([]string{p.File, ".html"}, "")
+		switch i {
+		case 0:
+			p.Prev = strings.Join([]string{Pages[i+1].File, ".html"}, "")
+		case len(Pages)-1:
+			p.Next = strings.Join([]string{Pages[i-1].File, ".html"}, "")
+		default:
+			p.Prev = strings.Join([]string{Pages[i+1].File, ".html"}, "")
+			p.Next = strings.Join([]string{Pages[i-1].File, ".html"}, "")
+		}
+	}
+
+	//////////////// Output Pages ////////////////
+	for _, p := range Pages {
+		f, err := os.Create(path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = tmpl.Execute(f, p)
+	}
+
+	//////////////// Generate Chronological Archive Page ////////////////
+	if _, err := os.Stat(path.Join(*tmpldir, "archive.tmpl")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
+		<html lang="en-us">
+		<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="default.css" />
+		<title>Archive</title>
+		</head><body>
+		<ul>{{range .}}
+		<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
+		</ul></body>
+		</html>`)
+	} else {
+		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "archive.tmpl"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	f, err := os.Create(path.Join(outDir, "archive.html"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tmpl.Execute(f, Pages)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+
 	//////////////// Generate RSS feed ////////////////
 	if *siteTitle != "" && *siteURL != "" && *siteDesc != "" {
 		if !strings.HasSuffix(*siteURL, "/") {
@@ -202,9 +250,9 @@ func main() {
 			Desc:  *siteDesc,
 			Items: make([]*Page, 0, len(Pages)),
 		}
-		for _, p := range Pages {
-			if p.firmDate {
-				feed.Items = append(feed.Items, p)
+		for i := 0; i < 25 && i < len(Pages); i++ {
+			if Pages[i].firmDate {
+				feed.Items = append(feed.Items, Pages[i])
 			}
 		}
 		for _, item := range feed.Items {
@@ -233,7 +281,7 @@ func main() {
 		}
 		f, err := os.Create(path.Join(outDir, "rss.xml"))
 		if err != nil {
-			log.Println(err)
+			log.Fatal(err)
 		}
 		err = tmpl.Execute(f, feed)
 		if *debug {
@@ -243,7 +291,6 @@ func main() {
 		}
 	}
 
-	//////////////// Generate (reverse) chronological Archive page ////////////////
 	//////////////// Generate alphabetically sorted Contents page ////////////////
 	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Title < Pages[j].Title })
 	for _, p := range Pages {
