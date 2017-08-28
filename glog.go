@@ -158,12 +158,12 @@ func main() {
 		Pages[i] = &p
 
 		if *debug {
-			fmt.Fprintf(os.Stderr, "Processing input file '%v'...\n", f)
+			fmt.Fprintf(os.Stderr, "\nProcessing input file '%v'...\n", f)
 			fmt.Fprintf(os.Stderr, "FILE\t%v\n", p.File)
 			fmt.Fprintf(os.Stderr, "TITLE\t%v\n", p.Title)
 			fmt.Fprintf(os.Stderr, "DATE\t%v\n", p.Date)
 			fmt.Fprintf(os.Stderr, "TAGS\t%v\n", p.Hashtags)
-			fmt.Fprintf(os.Stderr, "OUT\t%v\n\n", path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
+			fmt.Fprintf(os.Stderr, "OUT\t%v\n", path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
 		}
 	}
 
@@ -197,7 +197,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if *debug {
-			fmt.Fprintf(os.Stderr, "Page template not found; using minmal fallback template.\n\n")
+			fmt.Fprintf(os.Stderr, "\nPage template not found; using minmal fallback template.\n")
 		}
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "page.tmpl"))
@@ -235,7 +235,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if *debug {
-			fmt.Fprintf(os.Stderr, "Archive template not found; using minmal fallback template.\n\n")
+			fmt.Fprintf(os.Stderr, "\nArchive template not found; using minmal fallback template.\n")
 		}
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "archive.tmpl"))
@@ -252,7 +252,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if *debug {
-		fmt.Fprintf(os.Stderr, "Generated Archive file '%v'.\n\n", f.Name())
+		fmt.Fprintf(os.Stderr, "\nGenerated Archive file '%v'.\n", f.Name())
 	}
 
 	//////////////// Generate alphabetically sorted Contents page ////////////////
@@ -263,7 +263,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if *debug {
-			fmt.Fprintf(os.Stderr, "Contents template not found; using minmal fallback template.\n\n")
+			fmt.Fprintf(os.Stderr, "\nContents template not found; using minmal fallback template.\n")
 		}
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "contents.tmpl"))
@@ -280,7 +280,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if *debug {
-		fmt.Fprintf(os.Stderr, "Generated Contents file '%v'.\n\n", f.Name())
+		fmt.Fprintf(os.Stderr, "\nGenerated Contents file '%v'.\n", f.Name())
 	}
 
 	//////////////// Generate RSS feed ////////////////
@@ -322,7 +322,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if *debug {
-				fmt.Fprintf(os.Stderr, "RSS template not found; using minmal fallback template.\n\n")
+				fmt.Fprintf(os.Stderr, "\nRSS template not found; using minmal fallback template.\n")
 			}
 		} else {
 			tmpl, err = template.ParseFiles(path.Join(*tmpldir, "rss.tmpl"))
@@ -339,11 +339,46 @@ func main() {
 			log.Fatal(err)
 		}
 		if *debug {
-			fmt.Fprintf(os.Stderr, "Added RSS feed items:\n")
+			fmt.Fprintf(os.Stderr, "\nAdded RSS feed items:\n")
 			for _, item := range feed.Items {
 				fmt.Fprintf(os.Stderr, "%v\t%v\t%v\n", item.Date, item.Link, item.Title)
 			}
 		}
+	}
+
+	//////////////// Generate "lastest" posts HTML snippet ////////////////
+	Latest := make([]*Page, 0, 10)
+	for i := 0; i < 10 && i < len(Pages); i++ {
+		Latest = append(Latest, Pages[i])
+	}
+	if _, err := os.Stat(path.Join(*tmpldir, "latest.tmpl")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(`<div id="latest">
+		<ul>{{range .}}
+		<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
+		</ul>
+		</div>`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if *debug {
+			fmt.Fprintf(os.Stderr, "\n\"Latest posts\" template not found; using minmal fallback template.\n")
+		}
+	} else {
+		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "latest.tmpl"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	f, err = os.Create(path.Join(outDir, "latest.html"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tmpl.Execute(f, Latest)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "\nGenerated \"latest posts\" HTML snippet.\n")
 	}
 
 }
