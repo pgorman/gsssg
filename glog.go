@@ -193,6 +193,9 @@ func main() {
 		</head>
 		<body>{{.Body}}</body>
 		</html>`)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if *debug {
 			fmt.Fprintf(os.Stderr, "Page template not found; using minmal fallback template.\n\n")
 		}
@@ -208,6 +211,9 @@ func main() {
 			log.Fatal(err)
 		}
 		err = tmpl.Execute(f, p)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	postListTmpl := `<!DOCTYPE html>
@@ -225,6 +231,9 @@ func main() {
 	//////////////// Generate chronological Archive page ////////////////
 	if _, err := os.Stat(path.Join(*tmpldir, "archive.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(postListTmpl)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if *debug {
 			fmt.Fprintf(os.Stderr, "Archive template not found; using minmal fallback template.\n\n")
 		}
@@ -250,6 +259,9 @@ func main() {
 	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Title < Pages[j].Title })
 	if _, err := os.Stat(path.Join(*tmpldir, "contents.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(postListTmpl)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if *debug {
 			fmt.Fprintf(os.Stderr, "Contents template not found; using minmal fallback template.\n\n")
 		}
@@ -306,6 +318,9 @@ func main() {
 			</item>{{end}}
 			</channel>
 			</rss>`)
+			if err != nil {
+				log.Fatal(err)
+			}
 			if *debug {
 				fmt.Fprintf(os.Stderr, "RSS template not found; using minmal fallback template.\n\n")
 			}
@@ -320,6 +335,9 @@ func main() {
 			log.Fatal(err)
 		}
 		err = tmpl.Execute(f, feed)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if *debug {
 			fmt.Fprintf(os.Stderr, "Added RSS feed items:\n")
 			for _, item := range feed.Items {
