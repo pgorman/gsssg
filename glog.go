@@ -40,9 +40,9 @@ type Feed struct {
 func main() {
 	siteDesc := flag.String("d", "", "Description of the site, like 'All the news that's fit to print'. Required to produce RSS feed.")
 	debug := flag.Bool("debug", false, "Write debug info to STDERR.")
-	fglob := flag.String("g", "*.txt", "Specify the file glob pattern of input files.")
-	tmpldir := flag.String("l", "", "Specify the directory for template files. (default to input directory).")
-	outdir := flag.String("o", "", "Specify the output directory. (default to the current working directory).")
+	fglob := flag.String("g", "*.txt", "Set the file glob pattern of input files.")
+	tmpldir := flag.String("l", "", "Set the directory for template files. (default to input directory).")
+	outdir := flag.String("o", "", "Set the output directory. (default to the current working directory).")
 	pre := flag.Bool("p", false, "Leave input as pre-formatted text; don't process it like Markdown.")
 	siteTitle := flag.String("t", "", "Title of site, like 'My Blog'. Required to produce RSS feed.")
 	siteURL := flag.String("u", "", "URL of site, like 'https://example.com/blog/'. Required to produce RSS feed.")
@@ -51,6 +51,8 @@ func main() {
 
 	var inDir, outDir string
 	var err error
+	var tmpl *template.Template
+
 	switch len(flag.Args()) {
 	case 0:
 		inDir, err = os.Getwd()
@@ -73,9 +75,6 @@ func main() {
 		}
 		outDir = *outdir
 	}
-
-	var tmpl *template.Template
-
 	if *tmpldir == "" {
 		*tmpldir = inDir
 	}
@@ -159,13 +158,12 @@ func main() {
 		Pages[i] = &p
 
 		if *debug {
+			fmt.Fprintf(os.Stderr, "Processing input file '%v'...\n", f)
 			fmt.Fprintf(os.Stderr, "FILE\t%v\n", p.File)
 			fmt.Fprintf(os.Stderr, "TITLE\t%v\n", p.Title)
 			fmt.Fprintf(os.Stderr, "DATE\t%v\n", p.Date)
 			fmt.Fprintf(os.Stderr, "TAGS\t%v\n", p.Hashtags)
 			fmt.Fprintf(os.Stderr, "OUT\t%v\n\n", path.Join(outDir, strings.Join([]string{p.File, ".html"}, "")))
-			// err = tmpl.Execute(os.Stdout, p)
-			// err = tmpl.Execute(ioutil.Discard, p)
 		}
 	}
 
@@ -176,7 +174,7 @@ func main() {
 		switch i {
 		case 0:
 			p.Prev = strings.Join([]string{Pages[i+1].File, ".html"}, "")
-		case len(Pages)-1:
+		case len(Pages) - 1:
 			p.Next = strings.Join([]string{Pages[i-1].File, ".html"}, "")
 		default:
 			p.Prev = strings.Join([]string{Pages[i+1].File, ".html"}, "")
@@ -195,6 +193,9 @@ func main() {
 		</head>
 		<body>{{.Body}}</body>
 		</html>`)
+		if *debug {
+			fmt.Fprintf(os.Stderr, "Page template not found; using minmal fallback template.\n\n")
+		}
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "page.tmpl"))
 		if err != nil {
@@ -224,6 +225,9 @@ func main() {
 	//////////////// Generate chronological Archive page ////////////////
 	if _, err := os.Stat(path.Join(*tmpldir, "archive.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(postListTmpl)
+		if *debug {
+			fmt.Fprintf(os.Stderr, "Archive template not found; using minmal fallback template.\n\n")
+		}
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "archive.tmpl"))
 		if err != nil {
@@ -238,11 +242,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "Generated Archive file '%v'.\n\n", f.Name())
+	}
 
 	//////////////// Generate alphabetically sorted Contents page ////////////////
 	sort.Slice(Pages, func(i, j int) bool { return Pages[i].Title < Pages[j].Title })
 	if _, err := os.Stat(path.Join(*tmpldir, "contents.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(postListTmpl)
+		if *debug {
+			fmt.Fprintf(os.Stderr, "Contents template not found; using minmal fallback template.\n\n")
+		}
 	} else {
 		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "contents.tmpl"))
 		if err != nil {
@@ -256,6 +266,9 @@ func main() {
 	err = tmpl.Execute(f, Pages)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "Generated Contents file '%v'.\n\n", f.Name())
 	}
 
 	//////////////// Generate RSS feed ////////////////
@@ -293,6 +306,9 @@ func main() {
 			</item>{{end}}
 			</channel>
 			</rss>`)
+			if *debug {
+				fmt.Fprintf(os.Stderr, "RSS template not found; using minmal fallback template.\n\n")
+			}
 		} else {
 			tmpl, err = template.ParseFiles(path.Join(*tmpldir, "rss.tmpl"))
 			if err != nil {
@@ -305,8 +321,9 @@ func main() {
 		}
 		err = tmpl.Execute(f, feed)
 		if *debug {
+			fmt.Fprintf(os.Stderr, "Added RSS feed items:\n")
 			for _, item := range feed.Items {
-				fmt.Println(item.Date, "\t", item.Link, "\t", item.Title)
+				fmt.Fprintf(os.Stderr, "%v\t%v\t%v\n", item.Date, item.Link, item.Title)
 			}
 		}
 	}
