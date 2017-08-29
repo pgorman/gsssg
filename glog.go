@@ -25,7 +25,7 @@ type Page struct {
 	Date     time.Time
 	firmDate bool
 	Link     string
-	Hashtags string // TODO Change to a slice?
+	Hashtags []string
 	Next     string
 	Prev     string
 }
@@ -87,7 +87,7 @@ func main() {
 	Pages := make([]*Page, len(inFiles))
 
 	reTitle := regexp.MustCompile(`\s*#*\s+\w+\s*#*\s*`)
-	reHashtags := regexp.MustCompile(`[,\s^](#\w+)`)
+	reHashtags := regexp.MustCompile(`(?:^|\s|,)(#\w+)`)
 	// "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017" i.e. time.UnixDate
 	reDate1 := regexp.MustCompile(`\s*[MTWFS][ouehrau][neduitn] [JFMASOND][aepuco][nbrylgptvc]\s{1,2}\d{1,2} [0-2]\d:[0-5][0-9]:[0-5][0-9] [A-Z]{3} \d{4}\s*`)
 	// "20161231" or "20161231091857" or "20170101" or "20170101075601"
@@ -117,7 +117,7 @@ func main() {
 				p.Title = string(bytes.Trim(l, " #"))
 			}
 			if reHashtags.Match(l) {
-				p.Hashtags = string(l)
+				p.Hashtags = reHashtags.FindAllString(string(l), -1)
 			}
 			if reDate1.Match(l) && p.Date.IsZero() {
 				p.Date, err = time.Parse(time.UnixDate, string(l))
