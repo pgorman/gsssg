@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="default.css" />
+<title>Hashtags</title>
+</head>
+<body>
+{{range $k, $v := .}}<h2 id="{{ $k }}">{{ $k }}</h2>
+<ul>{{ range $v }}
+<li><a href="{{ .Link }}">{{ .Title }}</a></li>{{end}}
+</ul>{{ end }}
+</body>
+</html>

@@ -37,11 +37,6 @@ type Feed struct {
 	Items []*Page
 }
 
-type Hashtag struct {
-	Tag   string
-	Pages []*Page
-}
-
 func main() {
 	siteDesc := flag.String("d", "", "Description of the site, like 'All the news that's fit to print'. Required to produce RSS feed.")
 	debug := flag.Bool("debug", false, "Write debug info to STDERR.")
@@ -123,6 +118,9 @@ func main() {
 			}
 			if reHashtags.Match(l) {
 				p.Hashtags = reHashtags.FindAllString(string(l), -1)
+				for i, t := range p.Hashtags {
+					p.Hashtags[i] = strings.TrimSpace(t)
+				}
 			}
 			if reDate1.Match(l) && p.Date.IsZero() {
 				p.Date, err = time.Parse(time.UnixDate, string(l))
@@ -229,7 +227,7 @@ func main() {
 		<title>Archive</title>
 		</head><body>
 		<ul>{{range .}}
-		<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
+		<li><a href="{{.Link}}">{{.Title}}</a></li>{{end}}
 		</ul></body>
 		</html>`
 
@@ -359,7 +357,7 @@ func main() {
 	if _, err := os.Stat(path.Join(*tmpldir, "latest.tmpl")); os.IsNotExist(err) {
 		tmpl, err = template.New("").Parse(`<div id="latest">
 		<ul>{{range .}}
-		<li><a href="{{.Link}}">{{.Title}}</li>{{end}}
+		<li><a href="{{.Link}}">{{.Title}}</a></li>{{end}}
 		</ul>
 		</div>`)
 		if err != nil {
@@ -387,8 +385,53 @@ func main() {
 	}
 
 	//////////////// Generate Hashtags index page ////////////////
+	TagIndex := make(map[string][]*Page)
 	for _, p := range Pages {
-		for i, t := range p.Hashtags {
+		for _, t := range p.Hashtags {
+			TagIndex[t] = append(TagIndex[t], p)
+		}
+	}
+	if _, err := os.Stat(path.Join(*tmpldir, "hashtags.tmpl")); os.IsNotExist(err) {
+		tmpl, err = template.New("").Parse(`<!DOCTYPE html>
+		<html lang="en-us">
+		<head>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" href="default.css" />
+		<title>Hashtags</title>
+		</head>
+		<body>
+		{{range $k, $v := .}}<h2 id="{{ $k }}">{{ $k }}</h2>
+		<ul>{{ range $v }}
+		<li><a href="{{ .Link }}">{{ .Title }}</a></li>{{end}}
+		</ul>{{ end }}
+		</body>
+		</html>`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if *debug {
+			fmt.Fprintf(os.Stderr, "\nHashtags template not found; using minmal fallback template.\n")
+		}
+	} else {
+		tmpl, err = template.ParseFiles(path.Join(*tmpldir, "hashtags.tmpl"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	f, err = os.Create(path.Join(outDir, "hashtags.html"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = tmpl.Execute(f, TagIndex)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "\nTag Index:\n")
+		for tag, pages := range TagIndex {
+			for _, p := range pages {
+				fmt.Fprintf(os.Stderr, "%v\t%v\n", tag, p.Title)
+			}
 		}
 	}
 }
