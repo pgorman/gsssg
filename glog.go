@@ -37,6 +37,11 @@ type Feed struct {
 	Items []*Page
 }
 
+type Hashtag struct {
+	Tag   string
+	Pages []*Page
+}
+
 func main() {
 	siteDesc := flag.String("d", "", "Description of the site, like 'All the news that's fit to print'. Required to produce RSS feed.")
 	debug := flag.Bool("debug", false, "Write debug info to STDERR.")
@@ -381,4 +386,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\nGenerated \"latest posts\" HTML snippet.\n")
 	}
 
+	//////////////// Generate Hashtags index page ////////////////
+	for _, p := range Pages {
+		for i, t := range p.Hashtags {
+		}
+	}
 }
