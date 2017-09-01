@@ -1,10 +1,10 @@
-Gsssg is a very, very simple static site generator written in Go (golang).
+Gsssg is a very simple static site generator written in Go (golang).
 
 Gsssg treats the first argument as a path.
 It reads all the `.txt` files in that directory, and outputs `.html` files to the same path.
 It overwrites existing `.html` files with the same name.
 If the `-o` flag is given with the path to a directory, output will be sent there.
-Gsssg also produces a `contents.html` --- an alphabetized list of links to each `.html` file.
+Gsssg also produces a `contents.html`, an alphabetized list of links to each `.html` file.
 
 	$ gsssg /home/me/blog/
 	$ gsssg -g '*.md' -o /tmp /home/me/blog/
@@ -15,16 +15,16 @@ For a complete list of command-line options:
 
 	$ gsssg -h
 
-For files named like `20171231.md` or `20171231235959.md`, Gsssg creates "forward" and "backward" links between files.
-Gsssg may also produce an RSS feed.
-
 If the file `page.tmpl` exists in the target directory, Gsssg reads it as a Go template for format output.
-If the first line if an input file is a Markdown header, Gsssg uses that as the title of the page;
+If the first line of an input file is a Markdown header, Gsssg uses that as the title of the page;
 otherwise, it uses the file name.
 
 Gsssg sets the date of the page as the first line containing a date formatted like "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017".
 This is the default format of the GNU `date` command.
-If the file does not contain such a line, Gsssg sets the page date to the mtime of the file (see INODE(7)).
+
+For files named like `20171231.md` or `20171231235959.md`, Gsssg creates "forward" and "backward" links between files.
+It produces an `archive.html` page with a chronological list of pages.
+Gsssg produces an RSS feed for dated posts if the user specifies a site title, description, and URL as command line arguments.
 
 ## Dependencies ##
 
@@ -66,9 +66,9 @@ ssh "$server" mkdir -p "$remotedir"/.trash
 rsync -azq --delete --backup --backup-dir=.trash -e ssh "$outdir" "$server":"$remotedir"
 ```
 
-## Test ##
+## Example ##
 
-	$ $GOPATH/bin/gsssg -debug -o /tmp -d 'My site is cool.' -t 'My Blog' -u 'https://example.com/blog' ./test/
+	$ $GOPATH/bin/gsssg -debug -o /tmp -d 'My site is cool.' -t 'My Blog' -u 'https://example.com/blog' ./example/
 
 ## License (2-Clause BSD License) ##
 
