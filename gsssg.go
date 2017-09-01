@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/russross/blackfriday"
 	"io/ioutil"
+	"html"
 	"log"
 	"os"
 	"path"
@@ -293,9 +294,9 @@ func main() {
 			*siteURL += "/"
 		}
 		feed := Feed{
-			Title: *siteTitle,
-			URL:   *siteURL,
-			Desc:  *siteDesc,
+			Title: html.EscapeString(*siteTitle),
+			URL:   html.EscapeString(*siteURL),
+			Desc:  html.EscapeString(*siteDesc),
 			Items: make([]*Page, 0, len(Pages)),
 		}
 		for i := 0; i < 25 && i < len(Pages); i++ {
@@ -305,6 +306,8 @@ func main() {
 		}
 		for _, item := range feed.Items {
 			item.Link = strings.Join([]string{feed.URL, item.File, ".html"}, "")
+			item.Title = html.EscapeString(item.Title)
+			item.Link = html.EscapeString(item.Link)
 		}
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
