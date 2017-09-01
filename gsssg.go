@@ -1,4 +1,4 @@
-// Glog is a very, very simple static site generator.
+// Gsssg is a very simple static site generator.
 package main
 
 import (

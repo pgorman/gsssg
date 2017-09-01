@@ -1,43 +1,43 @@
-Glog is a very, very simple static site generator written in Go (golang).
+Gsssg is a very, very simple static site generator written in Go (golang).
 
-Glog treats the first argument as a path.
+Gsssg treats the first argument as a path.
 It reads all the `.txt` files in that directory, and outputs `.html` files to the same path.
 It overwrites existing `.html` files with the same name.
 If the `-o` flag is given with the path to a directory, output will be sent there.
-Glog also produces a `contents.html` --- an alphabetized list of links to each `.html` file.
+Gsssg also produces a `contents.html` --- an alphabetized list of links to each `.html` file.
 
-	$ glog /home/me/blog/
-	$ glog -g '*.md' -o /tmp /home/me/blog/
+	$ gsssg /home/me/blog/
+	$ gsssg -g '*.md' -o /tmp /home/me/blog/
 
-If the user does not supply a path, Glog looks in the current directory.
+If the user does not supply a path, Gsssg looks in the current directory.
 
 For a complete list of command-line options:
 
-	$ glog -h
+	$ gsssg -h
 
-For files named like `20171231.md` or `20171231235959.md`, Glog creates "forward" and "backward" links between files.
-Glog may also produce an RSS feed.
+For files named like `20171231.md` or `20171231235959.md`, Gsssg creates "forward" and "backward" links between files.
+Gsssg may also produce an RSS feed.
 
-If the file `page.tmpl` exists in the target directory, Glog reads it as a Go template for format output.
-If the first line if an input file is a Markdown header, Glog uses that as the title of the page;
+If the file `page.tmpl` exists in the target directory, Gsssg reads it as a Go template for format output.
+If the first line if an input file is a Markdown header, Gsssg uses that as the title of the page;
 otherwise, it uses the file name.
 
-Glog sets the date of the page as the first line containing a date formatted like "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017".
+Gsssg sets the date of the page as the first line containing a date formatted like "Sat Dec 31 09:18:57 EST 2016" or "Sun Jan  1 07:56:01 EST 2017".
 This is the default format of the GNU `date` command.
-If the file does not contain such a line, Glog sets the page date to the mtime of the file (see INODE(7)).
+If the file does not contain such a line, Gsssg sets the page date to the mtime of the file (see INODE(7)).
 
 ## Dependencies ##
 
-Glog depends on the Blackfriday Markdown parser.
+Gsssg depends on the Blackfriday Markdown parser.
 
 	$ go get github.com/russross/blackfriday
 
 ## Configuration and Publishing ##
 
-Glog does not use a configuration file.
+Gsssg does not use a configuration file.
 It does not have a built-in "publish" function.
 
-Use a simple shell script to configure Glog and publish, like:
+Use a simple shell script to configure Gsssg and publish, like:
 
 ```
 #!/bin/sh
@@ -54,7 +54,7 @@ server=example.com
 
 mkdir -p "$outdir"
 
-$HOME/bin/glog -o "$outdir" \
+$HOME/bin/gsssg -o "$outdir" \
 	-t "$indir"/templates \
 	-g '.md' \
 	-t "$title" \
@@ -68,7 +68,7 @@ rsync -azq --delete --backup --backup-dir=.trash -e ssh "$outdir" "$server":"$re
 
 ## Test ##
 
-	$ $GOPATH/bin/glog -debug -o /tmp -d 'My site is cool.' -t 'My Blog' -u 'https://example.com/blog' ./test/
+	$ $GOPATH/bin/gsssg -debug -o /tmp -d 'My site is cool.' -t 'My Blog' -u 'https://example.com/blog' ./test/
 
 ## License (2-Clause BSD License) ##
 
