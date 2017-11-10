@@ -225,9 +225,9 @@ func main() {
 		<head>
 		<meta charset="utf-8" />
 		<link rel="stylesheet" href="default.css" />
-		<title>Archive</title>
+		<title>{{.Title}}</title>
 		</head><body>
-		<ul>{{range .}}
+		<ul>{{range .Pages}}
 		<li><a href="{{.Link}}">{{.Title}}</a></li>{{end}}
 		</ul></body>
 		</html>`
@@ -251,7 +251,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = tmpl.Execute(f, Pages)
+	err = tmpl.Execute(f, struct{
+		Title string
+		Pages []*Page
+	}{
+		"Archive",
+		Pages,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
