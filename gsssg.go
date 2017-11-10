@@ -285,7 +285,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = tmpl.Execute(f, Pages)
+	err = tmpl.Execute(f, struct{
+		Title string
+		Pages []*Page
+	}{
+		"Contents",
+		Pages,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
