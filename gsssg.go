@@ -175,6 +175,11 @@ func main() {
 
 	for i, p := range Pages {
 		p.Link = strings.Join([]string{p.File, ".html"}, "")
+		if len(Pages) == 1 {
+			p.Prev = p.Link
+			p.Next = p.Link
+			break
+		}
 		switch i {
 		case 0:
 			p.Prev = strings.Join([]string{Pages[i+1].File, ".html"}, "")
