@@ -5,9 +5,8 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"github.com/russross/blackfriday"
-	"io/ioutil"
 	"html"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -17,6 +16,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/russross/blackfriday"
 )
 
 type Page struct {
@@ -50,29 +51,29 @@ func main() {
 	utc := flag.Bool("z", false, "For dates with unknown time zones, assume UTC rather than local time.")
 	flag.Parse()
 
-	var inDir, outDir string
 	var err error
+	var inDir, outDir string
 	var tmpl *template.Template
 
 	switch len(flag.Args()) {
 	case 0:
 		inDir, err = os.Getwd()
 		if err != nil {
-			log.Fatal("Couldn't get the current directory for input: ", err)
+			log.Fatal("error using the current directory for input: ", err)
 		}
 		outDir = inDir
 	case 1:
 		inDir = flag.Args()[0]
 		if _, err := os.Stat(inDir); os.IsNotExist(err) {
-			log.Fatal("Input directory error: ", err)
+			log.Fatal("error using input directory: ", err)
 		}
 		outDir = inDir
 	default:
-		log.Fatalf("One or zero arguments required, but %d supplied.", len(flag.Args()))
+		log.Fatalf("argument error: one or zero arguments required, but %d supplied", len(flag.Args()))
 	}
 	if *outdir != "" {
 		if _, err := os.Stat(*outdir); os.IsNotExist(err) {
-			log.Fatal("Output directory error: ", err)
+			log.Fatal("output directory error: ", err)
 		}
 		outDir = *outdir
 	}
@@ -82,7 +83,7 @@ func main() {
 
 	inFiles, err := filepath.Glob(path.Join(inDir, *fglob))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("error globbing input files: ", err)
 	}
 
 	Pages := make([]*Page, len(inFiles))
@@ -256,7 +257,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = tmpl.Execute(f, struct{
+	err = tmpl.Execute(f, struct {
 		Title string
 		Pages []*Page
 	}{
@@ -290,7 +291,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = tmpl.Execute(f, struct{
+	err = tmpl.Execute(f, struct {
 		Title string
 		Pages []*Page
 	}{
