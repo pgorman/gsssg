@@ -326,6 +326,7 @@ func main() {
 			item.Link = strings.Join([]string{feed.URL, item.File, ".html"}, "")
 			item.Title = html.EscapeString(item.Title)
 			item.Link = html.EscapeString(item.Link)
+			item.Body = html.EscapeString(item.Body)
 		}
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
@@ -338,6 +339,7 @@ func main() {
 			{{range .Items}}<item>
 			<title>{{.Title}}</title>
 			<link>{{.Link}}</link>
+			<description>{{.Body}}</description>
 			<guid isPermaLink="true">{{.Link}}</guid>
 			</item>{{end}}
 			</channel>
