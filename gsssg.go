@@ -330,20 +330,20 @@ func main() {
 		}
 		if _, err := os.Stat(path.Join(*tmpldir, "rss.tmpl")); os.IsNotExist(err) {
 			tmpl, err = template.New("").Parse(`<?xml version="1.0" encoding="utf-8"?>
-			<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-			<channel>
-			<atom:link href="{{.URL}}rss.xml" rel="self" type="application/rss+xml" />
-			<title>{{.Title}}</title>
-			<link>{{.URL}}</link>
-			<description>{{.Desc}}</description>
-			{{range .Items}}<item>
-			<title>{{.Title}}</title>
-			<link>{{.Link}}</link>
-			<description>{{.Body}}</description>
-			<guid isPermaLink="true">{{.Link}}</guid>
-			</item>{{end}}
-			</channel>
-			</rss>`)
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<atom:link href="{{.URL}}rss.xml" rel="self" type="application/rss+xml" />
+<title>{{.Title}}</title>
+<link>{{.URL}}</link>
+<description>{{.Desc}}</description>
+{{range .Items}}<item>
+<title>{{.Title}}</title>
+<link>{{.Link}}</link>
+<description>{{.Body}}</description>
+<guid isPermaLink="true">{{.Link}}</guid>
+</item>{{end}}
+</channel>
+</rss>`)
 			if err != nil {
 				log.Fatal(err)
 			}
